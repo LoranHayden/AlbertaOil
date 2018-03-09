@@ -13,27 +13,28 @@
             padding: 0;
         }
     </style>
-    <!-- 
-        This script was created as a short demo of using the existing provincial online data services 
-        from the province of Alberta to display and analyze information available regarding oil/gas 
+    <!--
+        This script was created as a short demo of using the existing provincial online data services
+        from the province of Alberta to display and analyze information available regarding oil/gas
         wells, pipelines and leases. https://gis.energy.gov.ab.ca/arcgis/rest/services/
-        
+
         Open the html page in any browser, begin by double clicking anywhere on the map to initiate
         a selection. Left click and drag to create a selection area. Releasing the left mouse button
-        will zoom to the selected region query the various service endpoints and return a set of 
-        graphics features which will be displayed on the map. Once these original features are being 
-        displayed the "analyze" mode will be enabled and you can left click and drag to select 
-        subsets of the displayed features for more detailed information. e.g. well name, designated 
-        representative for lease holders, pipeline status. 
-        
-        You zoom in/out using the mouse wheel. Panning is disabled while in selection or analysis 
-        mode; you can exit these modes by right or centre clicking with the mouse which will enable 
-        regular left click and drag panning. Note also that regular right click context menus have
-        been disabled to facilitate the mouse functionality described above.
-        
+        will zoom to the selected region query the various service endpoints and return a set of
+        graphics features which will be displayed on the map. Once these original features are being
+        displayed the "analyze" mode will be enabled and you can left click and drag to select
+        subsets of the displayed features for more detailed information. e.g. well name, designated
+        representative for lease holders, pipeline status.
+
+        You zoom in/out using the mouse wheel. Panning is disabled while in selection or analysis mode; 
+        you can exit these modes by right or centre clicking with the mouse which will enable regular 
+        left click and drag panning. Note that default browser right click context menus have been 
+        disabled to facilitate the demo functionality.
+
         The script uses the arcgis javascript api 3.21, jQuery 3.21 & whatever dojo version is
         included in the arcgis source.
     -->
+
     <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js"
             integrity="sha256-3edrmyuQ0w65f8gfBsqowzjJe2iM6n0nKciPUp8y+7E="
             crossorigin="anonymous"></script>
@@ -132,7 +133,7 @@
          drawHandle = drawTool.on("draw-complete", function (geo) {
              dojo.forEach(map.getLayer("wells").graphics, function (well) { 
                  if (geo.geometry.contains(well.geometry.getPoint(0)))
-                     alert("Well Name: " + well.attributes["WELL_NAME"]);
+                     alert("Well: " + well.attributes["WELL_NAME"]);
              })
              dojo.forEach(map.getLayer("pipes").graphics, function (pipeline) {
                  if (geo.geometry.intersects(pipeline.geometry.getExtent()))
@@ -145,10 +146,19 @@
          });
      }
 
+     function removeGraphicsLayer(name)
+     {
+         const index = map.graphicsLayerIds.indexOf(name);
+         if (index !== -1) {
+             map.removeLayer(map.getLayer(name));
+             map.graphicsLayerIds.splice(index, 1);
+         }
+     }
+
      function clearGraphicsLayers() {
-         if (map.graphicsLayerIds.indexOf("wells") != -1) map.removeLayer("wells");
-         if (map.graphicsLayerIds.indexOf("pipes") != -1) map.removeLayer("pipes");
-         if (map.graphicsLayerIds.indexOf("parcels") != -1) map.removeLayer("parcels");
+         removeGraphicsLayer("wells");
+         removeGraphicsLayer("pipes");
+         removeGraphicsLayer("parcels");
      }
 
      function initDrawTool(hint) {
@@ -209,11 +219,13 @@
 
      });
 
-     $('#map').mousedown(function (evt) {
-         if (evt.which === 2 || evt.which === 3)
-             clearGraphicsLayers();
+     $('#map').mousedown(function (event) {
+         if (event.which === 2 || event.which === 3) {
              resetDrawTool();
+             clearGraphicsLayers();
+         }
      });
+
  });
     </script>
 </head>
