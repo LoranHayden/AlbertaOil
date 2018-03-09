@@ -1,0 +1,194 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+    <meta name="viewport" content="initial-scale=1, maximum-scale=1, user-scalable=no">
+    <title>Labeling features client-side</title>
+    <link rel="stylesheet" href="https://js.arcgis.com/3.21/esri/css/esri.css">
+    <style>
+        html, body, #map {
+            height: 100%;
+            width: 100%;
+            margin: 0;
+            padding: 0;
+        }
+    </style>
+
+    <script src="https://js.arcgis.com/3.21/"></script>
+    <script>
+        require([
+        "esri/map",
+        "esri/geometry/Extent",
+        "esri/layers/FeatureLayer",
+        "esri/layers/GraphicsLayer",
+        "esri/graphic",
+        "esri/symbols/SimpleMarkerSymbol",
+        "esri/symbols/SimpleLineSymbol",
+        "esri/symbols/SimpleFillSymbol",
+        "esri/symbols/TextSymbol",
+        "esri/symbols/PictureMarkerSymbol",
+        "esri/renderers/SimpleRenderer",
+        "esri/layers/LabelClass",
+        "esri/Color",
+        "esri/tasks/QueryTask",
+        "esri/tasks/query",
+        "esri/toolbars/draw",
+        "dojo/DeferredList",
+        "dojo/dom",
+        "dojo/on",
+        "dojo/domReady!"
+        ],
+
+
+ function (Map, Extent, FeatureLayer, GraphicsLayer, Graphic, SimpleMarkerSymbol, SimpleLineSymbol, SimpleFillSymbol,
+          TextSymbol, PictureSymbol, SimpleRenderer, LabelClass, Color, QueryTask, Query, Draw, DeferredList) {
+     var wellIconPath = "M67.812,6.022c-0.753-2.929,1.344-6.333,4.844-6S92.394,12.776,98.75,19.647c17.538,18.957,18.209,33.249,18.209,33.249  " +
+         "l0.083,63.374h18.941v8.041H0v-8.043l20.998,0.084l-0.083-20.083l4,0.042l-0.125-15.207l-5.291,4.67l-3.833-3.834  " +
+         "c0,0,59.449-59.171,61.896-61.854C77.562,20.085,68.938,10.397,67.812,6.022z M26.999,78.396v17.833l3.958,0.084v19.917  " +
+         "l17.042,0.086l18.376-76.293L26.999,78.396z M90.041,116.271l25.813,0.001l-0.008-63.567c0,0-14.972-10.766-20.764-16.099  " +
+         "c-5.772-5.316-13.427-12.302-13.427-12.302L70.188,36.147L90.041,116.271z M68.582,37.188l-9.645,39.646l17.25-9.875L68.582,37.188z   " +
+         "M58.75,78.772l23.5,13.417l-5.833-23.417L58.75,78.772z M58.25,80.272l-8.312,34L83,94.772L58.25,80.272z M88.207,116.271  " +
+         "l-4.709-19.789L50.04,116.229L88.207,116.271z"
+
+     var drawHandle = null;
+     var drawTool = null;
+     var bbox = new Extent({ "xmin": -12765066.74, "ymin": 7046532.52, "xmax": -12745479.75, "ymax": 7065144.94, "spatialReference": { "wkid": 102100 } });
+
+     var map = new Map("map", {
+         basemap: "topo",
+         zoom: 16,
+         showLabels: true
+     });
+     map.setExtent(bbox);
+     map.disableDoubleClickZoom();
+
+     function getQueryResults(labelField, url, geo) {
+         let queryTask = new QueryTask(url); 
+         let query = new Query();
+         query.returnGeometry = true;
+         query.outFields = [labelField];
+         query.geometry = geo;
+         query.where = "1=1";
+         return queryTask.execute(query);
+     }
+
+     function loadGraphicsLayer(result, layerName, symbol) {
+         let graphicsLayer = new GraphicsLayer({ id: layerName });
+         let features = result.features;
+         if (map.graphicsLayerIds.indexOf(layerName) != -1)
+             map.removeLayer(map.getLayer(layerName));
+
+         for (let i = 0, il = features.length; i < il; i++) {
+             let graphic = features[i];
+             graphic.idx = i;
+             graphic.parentLayer = layerName;
+             graphic.setSymbol(symbol);
+             graphicsLayer.add(graphic);
+         }
+         graphicsLayer.on("click", function (result) {
+             let feature = result.graphic;
+             let attKey = "";
+             if (layerName == "parcels")
+                 attKey = "DesRep";
+             else if (layerName == "pipes")
+                 attKey = "MapTip";
+             else
+                 attKey = "WELL_NAME";
+             console.log(feature.attributes[attKey] + " is feature " + feature.idx + " of the " + layerName + " layer.")
+         });
+         map.addLayer(graphicsLayer);
+     }
+
+     function resetDrawTool() {
+         drawHandle.remove();
+         drawTool.deactivate();
+     }
+
+     function readySelectForIdentify() {
+         initDrawTool("Select the features to analyze.");
+         drawHandle = drawTool.on("draw-complete", function (geo) {
+             dojo.forEach(map.getLayer("wells").graphics, function (well) { 
+                 if (geo.geometry.contains(well.geometry.getPoint(0)))
+                     alert("Well: " + well.attributes["WELL_NAME"]);
+             })
+             dojo.forEach(map.getLayer("pipes").graphics, function (pipeline) {
+                 if (geo.geometry.intersects(pipeline.geometry.getExtent()))
+                     alert("Pipeline Status: " + pipeline.attributes["MapTip"]);
+             });
+             dojo.forEach(map.getLayer("parcels").graphics, function (pipeline) {
+                 if (geo.geometry.intersects(pipeline.geometry.getExtent()))
+                     alert("Parcel DesRep: " + pipeline.attributes["DesRep"]);
+             });
+         });
+     }
+
+     function clearGraphicsLayers() {
+         if (map.graphicsLayerIds.indexOf("wells") != -1) map.removeLayer("wells");
+         if (map.graphicsLayerIds.indexOf("pipes") != -1) map.removeLayer("pipes");
+         if (map.graphicsLayerIds.indexOf("parcels") != -1) map.removeLayer("parcels");
+     }
+
+     function initDrawTool(hint) {
+         if (drawHandle != null) drawHandle.remove();
+         if (drawTool == null) drawTool = new Draw(map);
+         esri.bundle.toolbars.draw.freehand = hint;
+         drawTool.activate(Draw.EXTENT);
+     }
+
+     map.on("dbl-click", function () {
+         clearGraphicsLayers();
+         initDrawTool("Left click and drag to select a region for analysis.");
+         drawHandle = drawTool.on("draw-complete", function (geo) {
+             resetDrawTool();
+             let parcelOutline = new SimpleLineSymbol("solid", new Color([255, 100, 100, 0.8]), 2.5);
+             let parcelSymbol = new SimpleFillSymbol("solid", parcelOutline, new Color([255, 100, 100, 0.8]));
+             let pipeSymbol = new SimpleLineSymbol("solid", new Color([0, 0, 0, 1]), 4);
+             let wellSymbol = new SimpleMarkerSymbol();
+             wellSymbol.setPath(wellIconPath);
+             wellSymbol.setColor(new dojo.Color(new Color([0, 0, 0, 1])));
+             wellSymbol.setSize(24);
+
+             let parcelPromise = getQueryResults("DesRep", "https://gis.energy.gov.ab.ca/arcgis/rest/services/Geoview/Mineral_Agreements_Ext_PROD/MapServer/26", geo.geometry);
+             let pipePromise = getQueryResults("MapTip", "https://gis.energy.gov.ab.ca/arcgis/rest/services/Geoview/ERCB_Ext_PROD/MapServer/10", geo.geometry);
+             let wellPromise = getQueryResults("WELL_NAME", "https://gis.energy.gov.ab.ca/arcgis/rest/services/Geoview/ERCB_Ext_PROD/MapServer/0", geo.geometry);
+             let promiseList = [];
+             promiseList.push(parcelPromise);
+             promiseList.push(pipePromise);
+             promiseList.push(wellPromise);
+             let wellResult = null;
+             let pipeResult = null;
+             let parcelResult = null;
+             var deferredPromises = new DeferredList(promiseList);
+             deferredPromises.then(function (result) {
+                 if (result[0][0] && result[1][0] && result[2][0]) {
+                     for (let i = 0; i < 3; i++) {
+                         if (result[i][1].geometryType === "esriGeometryPolygon") {
+                             parcelResult = result[i][1];
+                         }
+                         else if (result[i][1].geometryType === "esriGeometryPolyline") {
+                             pipeResult = result[i][1];
+                         }
+                         else {
+                             wellResult = result[i][1];
+                         }
+                     }
+                     loadGraphicsLayer(parcelResult, "parcels", parcelSymbol);
+                     loadGraphicsLayer(pipeResult, "pipes", pipeSymbol);
+                     loadGraphicsLayer(wellResult, "wells", wellSymbol);
+                     readySelectForIdentify();
+                 }
+                 else {
+                     // React to a failure
+                 }
+             });
+             map.setExtent(new Extent(geo.geometry));
+         });
+
+     });
+ });
+    </script>
+</head>
+<body>
+    <div id="map"></div>
+</body>
+</html>
