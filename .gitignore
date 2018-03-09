@@ -286,3 +286,10 @@ __pycache__/
 *.btm.cs
 *.odx.cs
 *.xsd.cs
+/AlbertaOil/AlbertaOil.sln
+/AlbertaOil/AlbertaOil/Web.Release.config
+/AlbertaOil/AlbertaOil/Web.Debug.config
+/AlbertaOil/AlbertaOil/Web.config
+/AlbertaOil/AlbertaOil/Properties/AssemblyInfo.cs
+/AlbertaOil/AlbertaOil/packages.config
+/AlbertaOil/AlbertaOil/AlbertaOil.csproj
