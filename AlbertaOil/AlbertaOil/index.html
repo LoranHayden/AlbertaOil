@@ -109,7 +109,7 @@
          drawHandle = drawTool.on("draw-complete", function (geo) {
              dojo.forEach(map.getLayer("wells").graphics, function (well) { 
                  if (geo.geometry.contains(well.geometry.getPoint(0)))
-                     alert("Well: " + well.attributes["WELL_NAME"]);
+                     alert("Well Name: " + well.attributes["WELL_NAME"]);
              })
              dojo.forEach(map.getLayer("pipes").graphics, function (pipeline) {
                  if (geo.geometry.intersects(pipeline.geometry.getExtent()))
